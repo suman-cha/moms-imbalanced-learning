@@ -1,0 +1,100 @@
+# MMD Kernel Bandwidth (σ) Ablation Study Configuration
+# This configuration tests the sensitivity of MMD kernel bandwidth parameter
+
+experiment_name: "mmd_bandwidth_ablation"
+parameter_name: "mmd_sigma"
+parameter_values: [0.1, 0.5, 1.0, 2.0, 5.0]
+
+# Model configuration
+model:
+  n_epochs: 2000
+  lr: 0.001
+  hidden_dims: [64, 32]
+  latent_dim: 16
+  residual: true
+  median_bw: false  # Set to false to use fixed sigma values
+  
+# Fixed hyperparameters
+fixed_params:
+  triplet_margin: 1.0  # Triplet margin (tested separately)
+  danger_k: 5          # Danger set k value (tested separately)
+  lambda_beta: 0.01   # Lambda weight (tested separately)
+  triplet_alpha: 0.3   # Alpha in triplet loss
+  
+# Training configuration
+training:
+  device: "cuda"
+  kernel_type: "gaussian"
+  loss_params: {}  # Will be populated with sigma value
+  
+# Evaluation configuration
+evaluation:
+  n_runs: 10
+  n_splits: 10
+  random_state: 42
+  metrics:
+    - "f1_score"
+    - "roc_auc"
+    - "g_mean"
+    - "precision"
+    - "recall"
+    - "balanced_accuracy"
+    
+# Dataset configuration (same as triplet_margin)
+datasets:
+  - name: "ecoli3"
+    path: "data/raw/ecoli3.dat"
+    imbalance_ratio: "~8.6:1"
+    n_features: 7
+    
+  - name: "glass4"
+    path: "data/raw/glass4.dat"
+    imbalance_ratio: "~15.5:1"
+    n_features: 9
+    
+  - name: "yeast4"
+    path: "data/raw/yeast4.dat"
+    imbalance_ratio: "~28.1:1"
+    n_features: 8
+    
+  - name: "yeast6"
+    path: "data/raw/yeast6.dat"
+    imbalance_ratio: "~41.4:1"
+    n_features: 8
+    
+  - name: "cleveland-0_vs_4"
+    path: "data/raw/cleveland-0_vs_4.dat"
+    imbalance_ratio: "~12.6:1"
+    n_features: 13
+    
+  - name: "ecoli-0-3-4_vs_5"
+    path: "data/raw/ecoli-0-3-4_vs_5.dat"
+    imbalance_ratio: "~9.0:1"
+    n_features: 7
+    
+  - name: "glass-0-1-6_vs_5"
+    path: "data/raw/glass-0-1-6_vs_5.dat"
+    imbalance_ratio: "~19.4:1"
+    n_features: 9
+    
+  - name: "yeast-0-5-6-7-9_vs_4"
+    path: "data/raw/yeast-0-5-6-7-9_vs_4.dat"
+    imbalance_ratio: "~9.1:1"
+    n_features: 8
+    
+  - name: "yeast-1-2-8-9_vs_7"
+    path: "data/raw/yeast-1-2-8-9_vs_7.dat"
+    imbalance_ratio: "~30.6:1"
+    n_features: 8
+    
+  - name: "yeast-1-4-5-8_vs_7"
+    path: "data/raw/yeast-1-4-5-8_vs_7.dat"
+    imbalance_ratio: "~22.1:1"
+    n_features: 8
+
+# Output configuration
+output:
+  results_dir: "results/ablation_study/mmd_bandwidth"
+  figures_dir: "figures/ablation_study/mmd_bandwidth"
+  log_dir: "logs/ablation_study/mmd_bandwidth"
+

@@ -1,0 +1,79 @@
+# Default Configuration for Imbalanced Classification Algorithms
+# Research-grade hyperparameter settings
+
+# SMOTE Configuration
+smote:
+  k_neighbors: 5  # Number of nearest neighbors for synthetic sample generation
+  random_state: 42  # For reproducibility
+  
+# SMOTEBoost Configuration
+smoteboost:
+  n_samples: 100  # Number of synthetic samples per boosting iteration
+  n_estimators: 50  # Maximum number of boosting iterations
+  learning_rate: 1.0  # Shrinkage factor in [0, 1]
+  algorithm: "SAMME.R"  # Boosting algorithm: "SAMME" or "SAMME.R"
+  k_neighbors: 5  # k for SMOTE
+  random_state: 42  # For reproducibility
+  
+# RUSBoost Configuration
+rusboost:
+  n_samples: 100  # Number of majority samples to remove per iteration
+  min_ratio: 1.0  # Minimum ratio of majority to minority samples
+  n_estimators: 50  # Maximum number of boosting iterations
+  learning_rate: 1.0  # Shrinkage factor
+  algorithm: "SAMME.R"  # Boosting algorithm
+  with_replacement: true  # Whether to undersample with replacement
+  random_state: 42  # For reproducibility
+  
+# OUBoost Configuration (Over-Under Boosting)
+ouboost:
+  n_samples: 100  # Number of synthetic minority samples per iteration
+  min_ratio: 1.0  # Minimum ratio parameter
+  n_estimators: 50  # Maximum number of boosting iterations
+  learning_rate: 1.0  # Shrinkage factor
+  algorithm: "SAMME.R"  # Boosting algorithm
+  with_replacement: false  # For majority undersampling
+  random_state: 42  # For reproducibility
+
+# Clustering Selection Configuration
+clustering:
+  density_fraction: 0.001  # Fraction parameter for DPC
+  delta_threshold: 0.1  # Threshold for delta gap detection
+  density_threshold: 0.01  # Threshold for density gap detection
+  alpha: 0.5  # Weight for density component in [0, 1]
+  beta: 0.5  # Weight for distance component in [0, 1]
+  sampling_multiplier: 6  # Multiplier for target majority samples
+  
+# Base Estimator Configuration
+base_estimator:
+  max_depth: 1  # For decision tree stump
+  min_samples_split: 2
+  min_samples_leaf: 1
+  
+# Cross-Validation Configuration
+cross_validation:
+  n_splits: 5  # Number of folds
+  shuffle: true  # Shuffle before splitting
+  random_state: 42  # For reproducibility
+  
+# Evaluation Metrics
+metrics:
+  primary: "f1_score"  # Primary metric for optimization
+  additional:  # Additional metrics to track
+    - "precision"
+    - "recall"
+    - "roc_auc"
+    - "g_mean"
+    - "balanced_accuracy"
+    
+# Logging Configuration
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  save_path: "logs/"  # Directory for log files
+  experiment_name: "imbalanced_classification"  # Experiment identifier
+  
+# Reproducibility
+reproducibility:
+  seed: 42  # Global random seed
+  deterministic: true  # Enable deterministic behavior where possible
+

@@ -1,0 +1,100 @@
+# Extreme Sparse Setting Test Configuration
+# Tests MOMS vs SMOTE with very few minority samples (10, 20, 50)
+
+experiment_name: "sparse_minority_comparison"
+test_type: "sparse_setting"
+
+# Model configuration
+model:
+  n_epochs: 1000
+  lr: 0.001
+  hidden_dims: [64, 32]
+  latent_dim: 16
+  residual: true
+  median_bw: true
+  
+# Fixed hyperparameters
+fixed_params:
+  triplet_margin: 1.0
+  mmd_sigma: 1.0
+  danger_k: 3  # Reduced for sparse settings
+  lambda_beta: 0.01
+  triplet_alpha: 0.3
+  
+# Training configuration
+training:
+  device: "cpu"
+  kernel_type: "gaussian"
+  loss_params: {}
+  
+# Sparse setting configurations
+minority_sample_counts: [10, 20, 50, 100, 200]
+
+# Methods to compare
+comparison_methods:
+  - "Original"  # No oversampling (baseline)
+  - "SMOTE"
+  - "ADASYN"
+  - "BorderlineSMOTE"
+  - "MOMS"  # Our method
+  
+# For SMOTE variants
+smote_config:
+  k_neighbors_map:
+    10: 3   # If 10 samples, use k=3
+    20: 5   # If 20 samples, use k=5
+    50: 5
+    100: 5
+    200: 5
+  
+# Evaluation configuration
+evaluation:
+  n_runs: 10  # Important for statistical significance
+  n_splits: 5  # 5-fold CV
+  random_state: 42
+  
+  metrics:
+    - "f1_score"
+    - "roc_auc"
+    - "g_mean"
+    - "precision"
+    - "recall"
+  
+# Base classifiers
+classifiers:
+  - "RF"
+  - "SVM"
+  - "DT"
+  
+# Datasets (representative medium-sized datasets)
+datasets:
+  - name: "ecoli3"
+    path: "data/raw/ecoli3.dat"
+    
+  - name: "glass4"
+    path: "data/raw/glass4.dat"
+    
+  - name: "yeast4"
+    path: "data/raw/yeast4.dat"
+    
+  - name: "ionosphere"
+    path: "data/raw/ionosphere.dat"
+    
+  - name: "pima"
+    path: "data/raw/pima.dat"
+
+# Analysis settings
+analysis:
+  # Find critical sample size where MOMS starts outperforming SMOTE
+  find_threshold: true
+  
+  # Statistical significance testing
+  significance_test: "wilcoxon"  # Wilcoxon signed-rank test
+  alpha: 0.05
+  
+# Output configuration
+output:
+  results_dir: "results/scalability_analysis/sparse"
+  figures_dir: "figures/scalability/sparse"
+  log_dir: "logs/scalability/sparse"
+
