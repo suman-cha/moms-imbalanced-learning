@@ -204,3 +204,5 @@ ENV/
 !results/.gitkeep
 !figures/.gitkeep
 
+
+.cursorrules
