@@ -7,19 +7,18 @@ parameter_values: [0.1, 0.5, 1.0, 2.0, 5.0]
 
 # Model configuration
 model:
-  n_epochs: 2000
+  n_epochs: 1000
   lr: 0.001
-  hidden_dims: [64, 32]
-  latent_dim: 16
+  hidden_dims: [16, 32, 64, 128]
+  latent_dim: 256
   residual: true
   median_bw: false  # Set to false to use fixed sigma values
   
 # Fixed hyperparameters
 fixed_params:
-  triplet_margin: 1.0  # Triplet margin (tested separately)
+  triplet_margin: 1.0  # Triplet margin (tested separately, triplet_alpha = triplet_margin)
   danger_k: 5          # Danger set k value (tested separately)
   lambda_beta: 0.01   # Lambda weight (tested separately)
-  triplet_alpha: 0.3   # Alpha in triplet loss
   
 # Training configuration
 training:
@@ -33,12 +32,10 @@ evaluation:
   n_splits: 10
   random_state: 42
   metrics:
-    - "f1_score"
-    - "roc_auc"
-    - "g_mean"
-    - "precision"
-    - "recall"
-    - "balanced_accuracy"
+    - "roc_auc"      # AUROC: Area Under the ROC Curve
+    - "g_mean"       # G-mean: Geometric mean of sensitivity and specificity
+    - "f1_score"     # F1-score: Harmonic mean of precision and recall
+    - "mcc"          # MCC: Matthews Correlation Coefficient
     
 # Dataset configuration (same as triplet_margin)
 datasets:

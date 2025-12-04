@@ -1,0 +1,97 @@
+# Triplet Margin (α) Ablation Study Configuration - CUDA:5
+# 
+# This configuration tests the sensitivity of triplet margin parameter (α)
+# in the local_triplet_loss function. The triplet margin controls the separation
+# between positive (minority) and negative (majority) samples in the embedding space.
+#
+# Reference: Learning Majority-to-Minority Transformations with MMD and Triplet Loss
+#            for Imbalanced Classification (arXiv:2509.11511)
+#
+# Reproducibility: Fixed seed (1203) for all random operations
+# Metrics: AUROC, G-mean, MCC, F1-score
+# GPU Assignment: cuda:5, Datasets 8-14 (of 29)
+
+experiment_name: "triplet_margin_ablation_cuda5"
+parameter_name: "triplet_margin"
+parameter_values: [0.1, 0.5, 2.0, 5.0]
+
+# Model configuration
+model:
+  n_epochs: 2000
+  lr: 0.001
+  hidden_dims: [16, 32, 64, 128]
+  latent_dim: 256
+  residual: true
+  median_bw: true
+  seed: 1203  # Fixed seed for model initialization and training reproducibility
+  
+# Fixed hyperparameters (other than the one being ablated)
+fixed_params:
+  mmd_sigma: 1.0  # MMD kernel bandwidth (will be tested separately)
+  danger_k: 5     # Danger set k value (will be tested separately)
+  lambda_beta: 0.01  # Lambda weight (will be tested separately)
+  triplet_alpha: 0.3  # Alpha in triplet loss (not the margin)
+  
+# Training configuration
+training:
+  device: "cuda:5"
+  kernel_type: "gaussian"
+  loss_params: {}
+  
+# Evaluation configuration
+evaluation:
+  n_runs: 10
+  n_splits: 10  # 10-fold cross-validation
+  random_state: 1203  # Fixed seed for reproducibility (paper standard)
+  seed: 1203  # Additional seed parameter for consistency
+  metrics:
+    - "roc_auc"      # AUROC: Area Under the ROC Curve
+    - "g_mean"       # G-mean: Geometric mean of sensitivity and specificity
+    - "mcc"          # MCC: Matthews Correlation Coefficient
+    - "f1_score"     # F1-score: Harmonic mean of precision and recall
+    
+# Dataset configuration - Datasets 8-14
+datasets:
+  # Local .dat files
+  - name: "glass4"
+    path: "data/raw/glass4.dat"
+    imbalance_ratio: "~15.5:1"
+    n_features: 9
+    
+  - name: "pima"
+    path: "data/raw/pima.dat"
+    imbalance_ratio: "~1.9:1"
+    n_features: 8
+    
+  - name: "segment0"
+    path: "data/raw/segment0.dat"
+    imbalance_ratio: "~6.0:1"
+    n_features: 19
+    
+  - name: "winequality-red-3_vs_5"
+    path: "data/raw/winequality-red-3_vs_5.dat"
+    imbalance_ratio: "~68.1:1"
+    n_features: 11
+    
+  - name: "winequality-red-4"
+    path: "data/raw/winequality-red-4.dat"
+    imbalance_ratio: "~29.2:1"
+    n_features: 11
+    
+  - name: "winequality-white-3_vs_7"
+    path: "data/raw/winequality-white-3_vs_7.dat"
+    imbalance_ratio: "~44.0:1"
+    n_features: 11
+    
+  - name: "winequality-white-3-9_vs_5"
+    path: "data/raw/winequality-white-3-9_vs_5.dat"
+    imbalance_ratio: "~58.3:1"
+    n_features: 11
+
+# Output configuration
+output:
+  results_dir: "results/ablation_study/triplet_margin_cuda5"
+  figures_dir: "figures/ablation_study/triplet_margin_cuda5"
+  log_dir: "logs/ablation_study/triplet_margin_cuda5"
+
+

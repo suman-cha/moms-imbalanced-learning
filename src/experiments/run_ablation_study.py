@@ -21,11 +21,11 @@ import pandas as pd
 import torch
 from pathlib import Path
 from collections import defaultdict
+from tqdm import tqdm
 from sklearn.model_selection import StratifiedKFold
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.metrics import (
-    f1_score, roc_auc_score, precision_score, recall_score,
-    balanced_accuracy_score
+    f1_score, roc_auc_score, matthews_corrcoef
 )
 
 # Add parent directories to path
@@ -45,23 +45,100 @@ from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.neural_network import MLPClassifier
 
+# Import imblearn for dataset loading
+try:
+    from imblearn.datasets import fetch_datasets
+    IMBLEARN_AVAILABLE = True
+except ImportError:
+    IMBLEARN_AVAILABLE = False
 
-def load_dataset_from_file(file_path: str):
+
+def encode_categorical_features(X):
     """
-    Load dataset from file (supports .dat and .csv formats).
+    Encode categorical features to numerical values.
+    
+    Parameters
+    ----------
+    X : pd.DataFrame
+        Feature matrix that may contain categorical columns.
+        
+    Returns
+    -------
+    X_encoded : pd.DataFrame
+        Feature matrix with all categorical columns encoded as numerical.
+    """
+    X_encoded = X.copy()
+    
+    # Identify categorical columns (object or category dtype)
+    categorical_columns = X_encoded.select_dtypes(include=['object', 'category']).columns
+    
+    # Encode each categorical column
+    for col in categorical_columns:
+        le = LabelEncoder()
+        # Handle missing values by converting to string first
+        X_encoded[col] = X_encoded[col].astype(str)
+        X_encoded[col] = le.fit_transform(X_encoded[col])
+    
+    return X_encoded
+
+
+def load_dataset_from_file(file_path: str, dataset_name: str = None):
+    """
+    Load dataset from file or imblearn.datasets.
+    
+    Supports:
+    - File paths (.dat and .csv formats)
+    - imblearn.datasets.fetch_datasets() when file_path == "imblearn"
+    - Automatic encoding of categorical features
     
     Parameters
     ----------
     file_path : str
-        Path to the dataset file.
+        Path to the dataset file, or "imblearn" to use fetch_datasets().
+    dataset_name : str, optional
+        Dataset name when using imblearn (required if file_path == "imblearn").
         
     Returns
     -------
     X : pd.DataFrame
-        Feature matrix.
+        Feature matrix with all numerical values.
     y : np.ndarray
         Binary labels (0: majority, 1: minority).
     """
+    # Handle imblearn.datasets
+    if file_path == "imblearn" or str(file_path) == "imblearn":
+        if not IMBLEARN_AVAILABLE:
+            raise ImportError("imblearn package is not installed. Install it with: pip install imbalanced-learn")
+        
+        if dataset_name is None:
+            raise ValueError("dataset_name is required when using imblearn")
+        
+        # Fetch all datasets
+        datasets_dict = fetch_datasets()
+        
+        if dataset_name not in datasets_dict:
+            available = list(datasets_dict.keys())[:10]  # Show first 10
+            raise ValueError(
+                f"Dataset '{dataset_name}' not found in imblearn.datasets. "
+                f"Available datasets (showing first 10): {available}"
+            )
+        
+        # Get the specific dataset
+        dataset = datasets_dict[dataset_name]
+        X = pd.DataFrame(dataset.data)
+        y = dataset.target
+        
+        # Encode categorical features
+        X = encode_categorical_features(X)
+        
+        # Convert labels to binary (assume minority is the less frequent class)
+        unique_labels, counts = np.unique(y, return_counts=True)
+        minority_label = unique_labels[np.argmin(counts)]
+        y_binary = np.where(y == minority_label, 1, 0)
+        
+        return X, y_binary
+    
+    # Handle file paths
     file_path = Path(file_path)
     
     if not file_path.exists():
@@ -74,6 +151,9 @@ def load_dataset_from_file(file_path: str):
         X = data.iloc[:, :-1]
         y = data.iloc[:, -1].values
         
+        # Encode categorical features
+        X = encode_categorical_features(X)
+        
         # Convert labels to binary (assume minority is the less frequent class)
         unique_labels, counts = np.unique(y, return_counts=True)
         minority_label = unique_labels[np.argmin(counts)]
@@ -84,6 +164,9 @@ def load_dataset_from_file(file_path: str):
         data = pd.read_csv(file_path)
         X = data.iloc[:, :-1]
         y = data.iloc[:, -1].values
+        
+        # Encode categorical features
+        X = encode_categorical_features(X)
         
         # Convert labels to binary
         unique_labels, counts = np.unique(y, return_counts=True)
@@ -121,7 +204,9 @@ def get_base_classifiers(seed):
 
 def compute_metrics(y_true, y_pred, y_proba=None):
     """
-    Compute evaluation metrics.
+    Compute evaluation metrics for imbalanced classification.
+    
+    Core metrics: AUROC, G-mean, F1-score, MCC
     
     Parameters
     ----------
@@ -130,28 +215,34 @@ def compute_metrics(y_true, y_pred, y_proba=None):
     y_pred : np.ndarray
         Predicted labels.
     y_proba : np.ndarray, optional
-        Predicted probabilities.
+        Predicted probabilities (required for AUROC).
         
     Returns
     -------
     metrics : dict
-        Dictionary of computed metrics.
+        Dictionary containing only the 4 core metrics.
     """
-    metrics = {
-        'f1_score': f1_score(y_true, y_pred, zero_division=0),
-        'precision': precision_score(y_true, y_pred, zero_division=0),
-        'recall': recall_score(y_true, y_pred, zero_division=0),
-        'balanced_accuracy': balanced_accuracy_score(y_true, y_pred),
-    }
+    from sklearn.metrics import confusion_matrix
     
+    # Initialize metrics dictionary
+    metrics = {}
+    
+    # 1. F1-score: Harmonic mean of precision and recall
+    metrics['f1_score'] = f1_score(y_true, y_pred, zero_division=0)
+    
+    # 2. MCC: Matthews Correlation Coefficient
+    metrics['mcc'] = matthews_corrcoef(y_true, y_pred)
+    
+    # 3. AUROC: Area Under the ROC Curve (requires probability estimates)
     if y_proba is not None:
         try:
             metrics['roc_auc'] = roc_auc_score(y_true, y_proba)
         except ValueError:
             metrics['roc_auc'] = 0.0
+    else:
+        metrics['roc_auc'] = 0.0
     
-    # G-mean = sqrt(recall_majority * recall_minority)
-    from sklearn.metrics import confusion_matrix
+    # 4. G-mean: Geometric mean of sensitivity and specificity
     cm = confusion_matrix(y_true, y_pred)
     if cm.shape == (2, 2):
         tn, fp, fn, tp = cm.ravel()
@@ -214,26 +305,30 @@ def run_single_experiment(
     # Set the hyperparameter being tested
     if param_name == 'triplet_margin':
         margin = param_value
-        triplet_alpha = fixed_params.get('triplet_alpha', 0.3)
+        # triplet_alpha should equal triplet_margin
+        triplet_alpha = margin
         beta = fixed_params['lambda_beta']
         k = fixed_params['danger_k']
         sigma = fixed_params['mmd_sigma']
     elif param_name == 'mmd_sigma':
         sigma = param_value
         margin = fixed_params['triplet_margin']
-        triplet_alpha = fixed_params.get('triplet_alpha', 0.3)
+        # triplet_alpha should equal triplet_margin
+        triplet_alpha = margin
         beta = fixed_params['lambda_beta']
         k = fixed_params['danger_k']
     elif param_name == 'danger_k':
         k = int(param_value)
         margin = fixed_params['triplet_margin']
-        triplet_alpha = fixed_params.get('triplet_alpha', 0.3)
+        # triplet_alpha should equal triplet_margin
+        triplet_alpha = margin
         beta = fixed_params['lambda_beta']
         sigma = fixed_params['mmd_sigma']
     elif param_name == 'lambda_beta':
         beta = param_value
         margin = fixed_params['triplet_margin']
-        triplet_alpha = fixed_params.get('triplet_alpha', 0.3)
+        # triplet_alpha should equal triplet_margin
+        triplet_alpha = margin
         k = fixed_params['danger_k']
         sigma = fixed_params['mmd_sigma']
     else:
@@ -321,7 +416,7 @@ def run_single_experiment(
     return metrics
 
 
-def run_ablation_study(config_path: str, output_dir: str = None):
+def run_ablation_study(config_path: str, output_dir: str = None, resume: bool = True):
     """
     Run complete ablation study for a hyperparameter.
     
@@ -331,6 +426,8 @@ def run_ablation_study(config_path: str, output_dir: str = None):
         Path to YAML configuration file.
     output_dir : str, optional
         Output directory for results. If None, uses config output settings.
+    resume : bool, optional
+        If True, resume from checkpoint if available. Default is True.
     """
     # Load configuration
     with open(config_path, 'r', encoding='utf-8') as f:
@@ -342,6 +439,29 @@ def run_ablation_study(config_path: str, output_dir: str = None):
     else:
         output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Define checkpoint file
+    checkpoint_file = output_dir / f"{config['experiment_name']}_checkpoint.csv"
+    
+    # Load existing results if resuming
+    completed_experiments = set()
+    all_results = []
+    
+    if resume and checkpoint_file.exists():
+        print(f"\n{'='*60}")
+        print(f"Resuming from checkpoint: {checkpoint_file}")
+        print(f"{'='*60}\n")
+        
+        checkpoint_df = pd.read_csv(checkpoint_file)
+        all_results = checkpoint_df.to_dict('records')
+        
+        # Track completed (dataset, parameter_value) combinations
+        for row in all_results:
+            key = (row['dataset'], row['parameter_value'])
+            completed_experiments.add(key)
+        
+        print(f"Loaded {len(completed_experiments)} completed experiments")
+        print(f"Total rows in checkpoint: {len(all_results)}\n")
     
     # Setup device
     device = config['training']['device']
@@ -360,37 +480,52 @@ def run_ablation_study(config_path: str, output_dir: str = None):
     random_state = config['evaluation']['random_state']
     metrics_list = config['evaluation']['metrics']
     
-    # Store results
-    all_results = []
-    
     print(f"\n{'='*60}")
     print(f"Starting Ablation Study: {config['experiment_name']}")
     print(f"Parameter: {param_name}")
     print(f"Values: {param_values}")
     print(f"Datasets: {len(datasets)}")
+    print(f"Completed experiments: {len(completed_experiments)}")
     print(f"{'='*60}\n")
     
-    # Iterate over datasets
-    for dataset_info in datasets:
+    # Iterate over datasets with progress bar
+    dataset_pbar = tqdm(datasets, desc="Datasets", position=0, leave=True)
+    for dataset_info in dataset_pbar:
         dataset_name = dataset_info['name']
         dataset_path = dataset_info['path']
         
-        print(f"\nProcessing dataset: {dataset_name}")
-        print(f"  Path: {dataset_path}")
+        dataset_pbar.set_description(f"Dataset: {dataset_name}")
         
         try:
             # Load dataset
-            X, y = load_dataset_from_file(dataset_path)
-            print(f"  Shape: {X.shape}, Imbalance ratio: {np.sum(y==0)/np.sum(y==1):.2f}")
+            # Pass dataset_name for imblearn datasets
+            X, y = load_dataset_from_file(dataset_path, dataset_name=dataset_name)
+            dataset_pbar.set_postfix({
+                'shape': X.shape,
+                'imbalance': f"{np.sum(y==0)/np.sum(y==1):.2f}"
+            })
             
-            # Iterate over parameter values
-            for param_value in param_values:
-                print(f"  Testing {param_name}={param_value}...")
+            # Iterate over parameter values with progress bar
+            param_pbar = tqdm(param_values, desc=f"  {param_name} values", position=1, leave=False)
+            for param_value in param_pbar:
+                param_pbar.set_description(f"  {param_name}={param_value}")
+                
+                # Check if this experiment is already completed
+                experiment_key = (dataset_name, param_value)
+                if experiment_key in completed_experiments:
+                    dataset_pbar.write(f"  Skipping {dataset_name} with {param_name}={param_value} (already completed)")
+                    continue
                 
                 # Store results for this parameter value
                 param_results = defaultdict(list)
                 
-                # Run cross-validation
+                # Calculate total folds for progress tracking
+                total_folds = n_runs * n_splits
+                
+                # Run cross-validation with progress bar
+                fold_pbar = tqdm(total=total_folds, desc="    Folds", position=2, leave=False)
+                fold_idx = 0
+                
                 for run in range(n_runs):
                     skf = StratifiedKFold(
                         n_splits=n_splits,
@@ -418,6 +553,15 @@ def run_ablation_study(config_path: str, output_dir: str = None):
                         # Store results
                         for metric_name, metric_value in metrics.items():
                             param_results[metric_name].append(metric_value)
+                        
+                        fold_idx += 1
+                        fold_pbar.update(1)
+                        fold_pbar.set_postfix({
+                            'F1': f"{np.mean(param_results.get('f1_score', [0])):.3f}",
+                            'AUC': f"{np.mean(param_results.get('roc_auc', [0])):.3f}"
+                        })
+                
+                fold_pbar.close()
                 
                 # Compute statistics
                 for metric_name in metrics_list:
@@ -437,21 +581,48 @@ def run_ablation_study(config_path: str, output_dir: str = None):
                             'n_splits': n_splits
                         })
                 
-                # Print summary
-                print(f"    Results: F1={np.mean(param_results['f1_score']):.4f}±{np.std(param_results['f1_score']):.4f}, "
-                      f"AUC={np.mean(param_results.get('roc_auc', [0])):.4f}±{np.std(param_results.get('roc_auc', [0])):.4f}")
+                # Save checkpoint after each parameter value
+                try:
+                    results_df = pd.DataFrame(all_results)
+                    results_df.to_csv(checkpoint_file, index=False)
+                    dataset_pbar.write(f"  Checkpoint saved: {len(all_results)} total rows")
+                except Exception as e:
+                    dataset_pbar.write(f"  Warning: Failed to save checkpoint: {e}")
+                
+                # Mark this experiment as completed
+                completed_experiments.add(experiment_key)
+                
+                # Update parameter progress bar with summary
+                param_pbar.set_postfix({
+                    'F1': f"{np.mean(param_results['f1_score']):.4f}±{np.std(param_results['f1_score']):.4f}",
+                    'AUC': f"{np.mean(param_results.get('roc_auc', [0])):.4f}±{np.std(param_results.get('roc_auc', [0])):.4f}"
+                })
+            
+            param_pbar.close()
         
         except Exception as e:
-            print(f"  Error processing dataset {dataset_name}: {e}")
+            dataset_pbar.write(f"  Error processing dataset {dataset_name}: {e}")
             import traceback
             traceback.print_exc()
             continue
     
-    # Save results
+    dataset_pbar.close()
+    
+    # Save final results
     results_df = pd.DataFrame(all_results)
     results_file = output_dir / f"{config['experiment_name']}_results.csv"
     results_df.to_csv(results_file, index=False)
-    print(f"\nResults saved to: {results_file}")
+    print(f"\n{'='*60}")
+    print(f"Final results saved to: {results_file}")
+    print(f"Total experiments completed: {len(completed_experiments)}")
+    print(f"Total result rows: {len(all_results)}")
+    print(f"{'='*60}")
+    
+    # Create a backup of the checkpoint file
+    if checkpoint_file.exists():
+        backup_file = output_dir / f"{config['experiment_name']}_checkpoint_backup.csv"
+        results_df.to_csv(backup_file, index=False)
+        print(f"Checkpoint backup saved to: {backup_file}")
     
     return results_df
 
@@ -470,15 +641,24 @@ def main():
         default=None,
         help='Output directory for results (overrides config)'
     )
+    parser.add_argument(
+        '--no-resume',
+        action='store_true',
+        help='Start from scratch instead of resuming from checkpoint'
+    )
     
     args = parser.parse_args()
     
     # Run ablation study
-    results = run_ablation_study(args.config, args.output_dir)
+    results = run_ablation_study(
+        args.config, 
+        args.output_dir,
+        resume=not args.no_resume
+    )
     
     print(f"\n{'='*60}")
     print("Ablation Study Complete!")
-    print(f"Total experiments: {len(results)}")
+    print(f"Total result rows: {len(results)}")
     print(f"{'='*60}")
 
 

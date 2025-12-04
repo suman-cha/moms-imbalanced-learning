@@ -1,0 +1,92 @@
+# MMD Kernel Bandwidth (σ) Ablation Study Configuration - CUDA:1
+#
+# This configuration tests the sensitivity of MMD kernel bandwidth parameter
+#
+# Reference: Learning Majority-to-Minority Transformations with MMD and Triplet Loss
+#            for Imbalanced Classification (arXiv:2509.11511)
+#
+# Reproducibility: Fixed seed (42) for all random operations
+# GPU Assignment: cuda:1, Datasets 4-6 (of 10)
+
+experiment_name: "mmd_bandwidth_ablation_cuda1"
+parameter_name: "mmd_sigma"
+parameter_values: [0.1, 0.5, 1.0, 2.0, 5.0]
+
+# Model configuration
+model:
+  n_epochs: 500
+  lr: 0.001
+  hidden_dims: [16, 32, 64, 128]
+  latent_dim: 256
+  residual: true
+  median_bw: false  # Set to false to use fixed sigma values
+  
+# Fixed hyperparameters
+fixed_params:
+  triplet_margin: 1.0  # Triplet margin (tested separately, triplet_alpha = triplet_margin)
+  danger_k: 5          # Danger set k value (tested separately)
+  lambda_beta: 0.01   # Lambda weight (tested separately)
+  
+# Training configuration
+training:
+  device: "cuda:1"
+  kernel_type: "gaussian"
+  loss_params: {}  # Will be populated with sigma value
+  
+# Evaluation configuration
+evaluation:
+  n_runs: 10
+  n_splits: 10
+  random_state: 1203  # Fixed seed for reproducibility (paper standard)
+  seed: 1203  # Additional seed parameter for consistency
+  metrics:
+    - "roc_auc"      # AUROC: Area Under the ROC Curve
+    - "g_mean"       # G-mean: Geometric mean of sensitivity and specificity
+    - "mcc"          # MCC: Matthews Correlation Coefficient
+    - "f1_score"     # F1-score: Harmonic mean of precision and recall
+    
+# Dataset configuration - Datasets 8-14
+datasets:    
+  # Datasets from imblearn.datasets.fetch_datasets()
+  - name: "thyroid_sick"
+    path: "imblearn"  # Loaded via imblearn.datasets.fetch_datasets()
+    imbalance_ratio: "~15.0:1"
+    n_features: 52
+    
+  - name: "us_crime"
+    path: "imblearn"  # Loaded via imblearn.datasets.fetch_datasets()
+    imbalance_ratio: "~12.0:1"
+    n_features: 100
+    
+  - name: "wine_quality"
+    path: "imblearn"  # Loaded via imblearn.datasets.fetch_datasets()
+    imbalance_ratio: "~26.0:1"
+    n_features: 11
+
+  # Local .dat files
+  - name: "abalone19"
+    path: "data/raw/abalone19.dat"
+    imbalance_ratio: "~129.4:1"
+    n_features: 8
+    
+  - name: "abalone9-18"
+    path: "data/raw/abalone9-18.dat"
+    imbalance_ratio: "~16.4:1"
+    n_features: 8
+    
+  - name: "cleveland-0_vs_4"
+    path: "data/raw/cleveland-0_vs_4.dat"
+    imbalance_ratio: "~12.6:1"
+    n_features: 13
+    
+  - name: "ecoli3"
+    path: "data/raw/ecoli3.dat"
+    imbalance_ratio: "~8.6:1"
+    n_features: 7
+# Output configuration
+output:
+  results_dir: "results/ablation_study/mmd_bandwidth_cuda1"
+  figures_dir: "figures/ablation_study/mmd_bandwidth_cuda1"
+  log_dir: "logs/ablation_study/mmd_bandwidth_cuda1"
+
+

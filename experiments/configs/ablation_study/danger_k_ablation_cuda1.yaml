@@ -1,0 +1,99 @@
+# Danger Set k Value Ablation Study Configuration - CUDA:1
+#
+# This configuration tests the sensitivity of k parameter in compute_danger_set,
+# which determines the number of nearest neighbors used to identify "danger"
+# minority samples near the decision boundary. These samples are prioritized
+# in the triplet loss computation.
+#
+# Reference: Learning Majority-to-Minority Transformations with MMD and Triplet Loss
+#            for Imbalanced Classification (arXiv:2509.11511)
+#
+# Reproducibility: Fixed seed (1203) for all random operations
+# Metrics: AUROC, G-mean, MCC, F1-score
+# GPU Assignment: cuda:1, Datasets 8-14 (of 29)
+
+experiment_name: "danger_k_ablation_cuda1"
+parameter_name: "danger_k"
+parameter_values: [3, 7, 10, 15]
+
+# Model configuration
+model:
+  n_epochs: 1000
+  lr: 0.001
+  hidden_dims: [16, 32, 64, 128]
+  latent_dim: 256
+  residual: true
+  median_bw: true
+  seed: 1203  # Fixed seed for model initialization and training reproducibility
+  
+# Fixed hyperparameters
+fixed_params:
+  triplet_margin: 1.0  # Triplet margin (tested separately)
+  mmd_sigma: 1.0        # MMD kernel bandwidth (tested separately)
+  lambda_beta: 0.01    # Lambda weight (tested separately)
+  triplet_alpha: 0.3   # Alpha in triplet loss
+  
+# Training configuration
+training:
+  device: "cuda:1"
+  kernel_type: "gaussian"
+  loss_params: {}
+  
+# Evaluation configuration
+evaluation:
+  n_runs: 10
+  n_splits: 10
+  random_state: 1203  # Fixed seed for reproducibility (paper standard)
+  seed: 1203  # Additional seed parameter for consistency
+  metrics:
+    - "roc_auc"      # AUROC: Area Under the ROC Curve
+    - "g_mean"       # G-mean: Geometric mean of sensitivity and specificity
+    - "mcc"          # MCC: Matthews Correlation Coefficient
+    - "f1_score"     # F1-score: Harmonic mean of precision and recall
+    
+# Dataset configuration - Datasets 8-14
+datasets:    
+  # Datasets from imblearn.datasets.fetch_datasets()
+  - name: "thyroid_sick"
+    path: "imblearn"  # Loaded via imblearn.datasets.fetch_datasets()
+    imbalance_ratio: "~15.0:1"
+    n_features: 52
+    
+  - name: "us_crime"
+    path: "imblearn"  # Loaded via imblearn.datasets.fetch_datasets()
+    imbalance_ratio: "~12.0:1"
+    n_features: 100
+    
+  - name: "wine_quality"
+    path: "imblearn"  # Loaded via imblearn.datasets.fetch_datasets()
+    imbalance_ratio: "~26.0:1"
+    n_features: 11
+
+  # Local .dat files
+  - name: "abalone19"
+    path: "data/raw/abalone19.dat"
+    imbalance_ratio: "~129.4:1"
+    n_features: 8
+    
+  - name: "abalone9-18"
+    path: "data/raw/abalone9-18.dat"
+    imbalance_ratio: "~16.4:1"
+    n_features: 8
+    
+  - name: "cleveland-0_vs_4"
+    path: "data/raw/cleveland-0_vs_4.dat"
+    imbalance_ratio: "~12.6:1"
+    n_features: 13
+    
+  - name: "ecoli3"
+    path: "data/raw/ecoli3.dat"
+    imbalance_ratio: "~8.6:1"
+    n_features: 7
+
+# Output configuration
+output:
+  results_dir: "results/ablation_study/danger_k_cuda1"
+  figures_dir: "figures/ablation_study/danger_k_cuda1"
+  log_dir: "logs/ablation_study/danger_k_cuda1"
+
+

@@ -134,6 +134,19 @@ def train_map(X_maj: torch.Tensor,
     trans_loader = DataLoader(trans_dataset, batch_size=len(trans_dataset), shuffle=True, drop_last=True)
     min_loader = DataLoader(min_dataset, batch_size=len(min_dataset), shuffle=True, drop_last=True) 
 
+    # Pre-compute danger_set and safe_maj once before training (performance optimization)
+    # These depend only on X_min and X_maj which are fixed, so no need to recompute every epoch
+    danger_set = None
+    safe_maj = None
+    if beta != 0.0:
+        danger_set = compute_danger_set(X_min, X_maj, seed, k)
+        if danger_set.size(0) > 0:
+            safe_maj = compute_safe_maj(X_maj, X_min)
+    
+    # Get margin and alpha values (with fallback to loss_params)
+    margin_val = loss_params.get('triplet_margin', triplet_margin) if loss_params else triplet_margin
+    alpha_val = loss_params.get('triplet_alpha', triplet_alpha) if loss_params else triplet_alpha
+
     # Training loop
     for epoch in range(n_epochs):
         model.train()  
@@ -160,20 +173,16 @@ def train_map(X_maj: torch.Tensor,
                 loss = mmd_loss
                 reg_loss = torch.tensor(0.0, device=device)
             else:
-                danger_set = compute_danger_set(X_min, X_maj, seed, k)
-                if danger_set.size(0) == 0:
+                if danger_set is None or danger_set.size(0) == 0:
                    loss = mmd_loss
                    reg_loss = torch.tensor(0.0, device=device)
                 else:
-                    safe_maj = compute_safe_maj(X_maj, X_min)
-                    # Use margin and alpha from parameters (with fallback to loss_params)
-                    margin_val = loss_params.get('triplet_margin', triplet_margin) if loss_params else triplet_margin
-                    alpha_val = loss_params.get('triplet_alpha', triplet_alpha) if loss_params else triplet_alpha
+                    # Use pre-computed danger_set and safe_maj
                     triplet_loss = local_triplet_loss(danger_set, X_trans, safe_maj, margin=margin_val, alpha=alpha_val)
                     reg_loss = beta * triplet_loss
             
-            loss = mmd_loss + beta * reg_loss
-            epoch_reg_loss += (beta * reg_loss).item()
+            loss = mmd_loss + reg_loss
+            epoch_reg_loss += reg_loss.item()
 
 
             # reg_loss = boundary_loss(X_min=b_min, X_trans=X_trans,

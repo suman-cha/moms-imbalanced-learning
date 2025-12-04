@@ -10,17 +10,16 @@ parameter_values: [0.0, 0.1, 0.5, 1.0, 2.0]
 model:
   n_epochs: 2000
   lr: 0.001
-  hidden_dims: [64, 32]
-  latent_dim: 16
+  hidden_dims: [16, 32, 64, 128]
+  latent_dim: 256
   residual: true
   median_bw: true
   
 # Fixed hyperparameters
 fixed_params:
-  triplet_margin: 1.0  # Triplet margin (tested separately)
+  triplet_margin: 1.0  # Triplet margin (tested separately, triplet_alpha = triplet_margin)
   mmd_sigma: 1.0        # MMD kernel bandwidth (tested separately)
   danger_k: 5          # Danger set k value (tested separately)
-  triplet_alpha: 0.3   # Alpha in triplet loss
   
 # Training configuration
 training:
