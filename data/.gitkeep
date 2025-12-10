@@ -1,4 +1,0 @@
-# This file ensures the data directory is tracked by git.
-# Place your datasets in data/raw/ (KEEL .dat format or .csv)
-# Or use imbalanced-learn: from imblearn.datasets import fetch_datasets
-
