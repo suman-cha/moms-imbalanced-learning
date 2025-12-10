@@ -1,12 +1,15 @@
-# Byte-compiled / optimized / DLL files
+# =============================================================================
+# .gitignore for MOMS: Learning Majority-to-Minority Transformations
+# arXiv:2509.11511
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Python
+# -----------------------------------------------------------------------------
 __pycache__/
 *.py[cod]
 *$py.class
-
-# C extensions
 *.so
-
-# Distribution / packaging
 .Python
 build/
 develop-eggs/
@@ -27,15 +30,45 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# PyInstaller
-*.manifest
-*.spec
+# -----------------------------------------------------------------------------
+# Virtual Environments
+# -----------------------------------------------------------------------------
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+__pypackages__/
 
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
+# -----------------------------------------------------------------------------
+# IDEs & Editors
+# -----------------------------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.spyderproject
+.spyproject
+.ropeproject
 
-# Unit test / coverage reports
+# -----------------------------------------------------------------------------
+# OS Files
+# -----------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# -----------------------------------------------------------------------------
+# Testing & Coverage
+# -----------------------------------------------------------------------------
 htmlcov/
 .tox/
 .nox/
@@ -49,160 +82,112 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 
-# Translations
-*.mo
-*.pot
-
-# Django stuff:
-*.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
-
-# Flask stuff:
-instance/
-.webassets-cache
-
-# Scrapy stuff:
-.scrapy
-
-# Sphinx documentation
-docs/_build/
-
-# PyBuilder
-target/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-*.ipynb_checkpoints/
-
-# IPython
-profile_default/
-ipython_config.py
-
-# pyenv
-.python-version
-
-# pipenv
-Pipfile.lock
-
-# PEP 582
-__pypackages__/
-
-# Celery stuff
-celerybeat-schedule
-celerybeat.pid
-
-# SageMath parsed files
-*.sage.py
-
-# Environments
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
-# Spyder project settings
-.spyderproject
-.spyproject
-
-# Rope project settings
-.ropeproject
-
-# mkdocs documentation
-/site
-
-# mypy
+# -----------------------------------------------------------------------------
+# Type Checkers
+# -----------------------------------------------------------------------------
 .mypy_cache/
 .dmypy.json
 dmypy.json
-
-# Pyre type checker
 .pyre/
 
-# IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.DS_Store
-Thumbs.db
+# -----------------------------------------------------------------------------
+# Jupyter Notebooks
+# -----------------------------------------------------------------------------
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/
 
-# OS files
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-Desktop.ini
+# -----------------------------------------------------------------------------
+# Experiment Outputs (NOT tracked - regenerable)
+# -----------------------------------------------------------------------------
+results/
+figures/
+logs/
+reports/
 
-# Project specific
-# Results and outputs (large files - uncomment if you want to exclude)
-# results/
-# figures/
+# -----------------------------------------------------------------------------
+# Experiment Tracking Platforms
+# -----------------------------------------------------------------------------
+wandb/
+mlruns/
+lightning_logs/
+tensorboard/
 
-# Data files (large files - uncomment if you want to exclude)
-# data/raw/
-# data/processed/
+# -----------------------------------------------------------------------------
+# Data Files (NOT tracked - download separately)
+# -----------------------------------------------------------------------------
+data/raw/
+data/processed/
+*.csv
+*.dat
+*.npy
+*.npz
+*.pkl
+*.pickle
+!data/.gitkeep
 
-# Checkpoints and model files
-results/checkpoints/
+# -----------------------------------------------------------------------------
+# Model Checkpoints
+# -----------------------------------------------------------------------------
 *.pth
 *.pt
 *.ckpt
 *.h5
 *.hdf5
+checkpoints/
 
-# Log files
-logs/
-*.log
+# -----------------------------------------------------------------------------
+# Development Notebooks (NOT tracked - use scripts for reproducibility)
+# -----------------------------------------------------------------------------
+experiments/notebooks/
 
-# Build artifacts for pydpc
+# -----------------------------------------------------------------------------
+# Third-Party Libraries (NOT tracked - install via requirements)
+# -----------------------------------------------------------------------------
+SMOTE_variants/
+tab-ddpm/
+tabsyn/
+
+# -----------------------------------------------------------------------------
+# LaTeX & Reference Materials
+# -----------------------------------------------------------------------------
+tex/
+ref/
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+
+# -----------------------------------------------------------------------------
+# Build Artifacts (pydpc)
+# -----------------------------------------------------------------------------
 pydpc/build/
 pydpc/dist/
 pydpc/*.egg-info/
-pydpc/**/__pycache__/
 pydpc/**/*.so
 pydpc/**/*.o
+pydpc/ext/*.c
+!pydpc/ext/core.c
 
-# Temporary files
+# -----------------------------------------------------------------------------
+# Temporary & Misc
+# -----------------------------------------------------------------------------
 *.tmp
 *.temp
 *.bak
-*.swp
-*.swo
+*.log
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
 
-# Python virtual environments
-venv/
-env/
-ENV/
-.venv/
-
-# Jupyter notebook outputs (keep notebooks, ignore outputs)
-# Uncomment if you want to exclude notebook outputs
-# *.ipynb
-
-# Large data files
-*.csv
-*.dat
-*.npy
-*.npz
-# Uncomment the following if data files are too large
-# data/raw/*.csv
-# data/raw/*.dat
-# data/processed/*.npy
-
-# Keep directory structure but ignore large files
-!data/raw/.gitkeep
-!data/processed/.gitkeep
-!results/.gitkeep
-!figures/.gitkeep
-
-
+# -----------------------------------------------------------------------------
+# Cursor IDE
+# -----------------------------------------------------------------------------
 .cursorrules
+
+# -----------------------------------------------------------------------------
+# Preserve directory structure
+# -----------------------------------------------------------------------------
+!.gitkeep

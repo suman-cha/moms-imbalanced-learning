@@ -1,198 +1,162 @@
-# MOMS: Minority Oversampling with Majority Selection
+<p align="center">
+  <h1 align="center">MOMS: Majority-to-Minority Transformation<br/>with MMD and Triplet Loss</h1>
+</p>
 
-A deep learning-based approach for handling imbalanced classification problems using Maximum Mean Discrepancy (MMD) and triplet loss.
+<p align="center">
+  <a href="https://arxiv.org/abs/2509.11511"><img src="https://img.shields.io/badge/arXiv-2509.11511-b31b1b.svg" alt="arXiv"></a>
+  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.8+-blue.svg" alt="Python 3.8+"></a>
+  <a href="https://pytorch.org/"><img src="https://img.shields.io/badge/PyTorch-2.0+-ee4c2c.svg" alt="PyTorch"></a>
+  <a href="mailto:oldrain123@yonsei.ac.kr"><img src="https://img.shields.io/badge/contact-oldrain123%40yonsei.ac.kr-green.svg" alt="Contact"></a>
+</p>
 
-## Overview
+<p align="center">
+  <b>Official implementation of <a href="https://arxiv.org/abs/2509.11511">"Learning Majority-to-Minority Transformations with MMD and Triplet Loss for Imbalanced Classification"</a></b>
+</p>
 
-MOMS (Minority Oversampling with Majority Selection) is a novel method for generating synthetic minority class samples in imbalanced learning scenarios. The model uses a neural network-based transformation map to learn a mapping from majority to minority class distributions, leveraging MMD loss for distribution matching and triplet loss for local structure preservation.
+---
 
-## Features
+## Abstract
 
-- **MMD-based Distribution Matching**: Uses Maximum Mean Discrepancy to align majority and minority distributions
-- **Triplet Loss for Local Structure**: Preserves local neighborhood structure through triplet constraints
-- **Adaptive Kernel Bandwidth**: Automatically adjusts kernel bandwidth based on data characteristics
-- **Comprehensive Ablation Studies**: Framework for hyperparameter sensitivity analysis
-- **Scalability Testing**: Tools for testing high-dimensional and sparse data scenarios
+Class imbalance in supervised classification often degrades model performance by biasing predictions toward the majority class. Traditional oversampling techniques generate synthetic minority samples via local interpolation but fail to capture global data distributions in high-dimensional spaces. Deep generative models offer richer distribution modeling yet suffer from training instability under severe imbalance.
 
-## Project Structure
+We introduce **MOMS**, an oversampling framework that learns a parametric transformation to map majority samples into the minority distribution. Our approach minimizes the **Maximum Mean Discrepancy (MMD)** between transformed and true minority samples for global alignment, and incorporates a **triplet loss regularizer** to enforce boundary awareness by guiding synthesized samples toward challenging borderline regions.
 
-```
-learnig_majority_to_minority/
-├── src/                          # Source code
-│   ├── models/                   # Model definitions
-│   │   ├── moms_losses.py       # MMD and triplet loss functions
-│   │   ├── moms_generate.py     # Data generation functions
-│   │   ├── moms_metrics.py      # Evaluation metrics
-│   │   └── kernels.py           # Kernel functions
-│   ├── training/                 # Training scripts
-│   │   └── moms_train.py        # Main training function
-│   ├── utils/                    # Utility functions
-│   │   ├── moms_utils.py        # General utilities
-│   │   └── moms_visualize.py    # Visualization tools
-│   └── experiments/              # Experiment scripts
-│       ├── run_ablation_study.py
-│       ├── run_scalability_test.py
-│       ├── run_sparse_test.py
-│       └── visualize_*.py
-├── experiments/                  # Experiment configurations
-│   └── configs/
-│       ├── ablation_study/       # Ablation study configs
-│       └── scalability_test/     # Scalability test configs
-├── data/                         # Data directory
-│   ├── raw/                      # Raw datasets
-│   └── processed/                # Processed datasets
-├── results/                      # Experiment results
-│   ├── ablation_study/           # Ablation study results
-│   └── scalability_analysis/     # Scalability test results
-├── figures/                      # Generated figures
-│   ├── ablation_study/           # Ablation study plots
-│   └── scalability/              # Scalability plots
-├── custom_packages/              # Custom packages
-│   └── boost/                    # Boosting algorithms
-├── pydpc/                        # Local pydpc package
-└── requirements.txt              # Python dependencies
-```
+<p align="center">
+  <img src="https://img.shields.io/badge/Evaluated_on-29_datasets-orange" alt="Datasets">
+  <img src="https://img.shields.io/badge/Metrics-AUROC_|_G--mean_|_F1_|_MCC-blue" alt="Metrics">
+</p>
+
+---
+
+## Key Features
+
+- **TransMap Network**: Encoder-decoder architecture with skip connections for majority → minority transformation
+- **MMD Loss**: Global distribution alignment with adaptive bandwidth (median heuristic)
+- **Local Triplet Loss**: Boundary-aware regularization using danger/safe set decomposition
+- **Comprehensive Baselines**: SMOTE, ADASYN, BorderlineSMOTE, MWMOTE, CTGAN, VAE, WGAN, GAMO, MGVAE, and boosting variants
+- **Config-Driven Experiments**: YAML-based hyperparameter ablations with checkpointing and multi-run aggregation
+
+---
 
 ## Installation
 
-### Prerequisites
+### Requirements
+- Python ≥ 3.8
+- PyTorch ≥ 2.0
+- CUDA (optional, for GPU acceleration)
 
-- Python 3.8 or higher
-- pip or conda
-
-### Step 1: Clone the Repository
-
-```bash
-git clone https://github.com/YOUR_USERNAME/REPOSITORY_NAME.git
-cd REPOSITORY_NAME
-```
-
-### Step 2: Install Dependencies
+### Setup
 
 ```bash
+# Clone repository
+git clone https://github.com/oldrain123/moms-imbalanced-learning.git
+cd moms-imbalanced-learning
+
+# Option 1: Conda (recommended for GPU)
+conda env create -f experiments/configs/environment.yml
+conda activate imb_clf
+
+# Option 2: pip
 pip install -r requirements.txt
+
+# Optional: Install pydpc for OUBoost baseline
+cd pydpc && pip install -e . && cd ..
 ```
 
-### Step 3: Install PyTorch (if needed)
-
-For CPU-only:
-```bash
-pip install torch --index-url https://download.pytorch.org/whl/cpu
-```
-
-For GPU support (CUDA):
-```bash
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-```
-
-### Step 4: Install Local pydpc Package (Optional)
-
-If you need the `pydpc` package for clustering-based selection:
+### Environment Variables
 
 ```bash
-cd pydpc
-pip install -e .
-cd ..
+# Linux/Mac
+export PYTHONPATH=$PWD:$PWD/src:$PWD/pydpc
+
+# Windows (PowerShell)
+$env:PYTHONPATH = "$PWD;$PWD\src;$PWD\pydpc"
 ```
 
-**Note:** On Windows, `pydpc` may require C++ build tools. If installation fails, the code includes a fallback mechanism.
+---
 
-### Step 5: Set Up Environment Variables (Windows)
+## Repository Structure
 
-For Windows, you may need to set `PYTHONPATH`:
-
-```powershell
-$env:PYTHONPATH = "$PWD;$PWD\src;$PWD\src\models;$PWD\src\training;$PWD\src\utils;$PWD\pydpc"
+```
+moms-imbalanced-learning/
+├── src/
+│   ├── models/
+│   │   ├── moms_losses.py      # MMD, triplet loss, danger set computation
+│   │   ├── moms_generate.py    # Sample generation utilities
+│   │   ├── moms_metrics.py     # AUROC, G-mean, MCC, F1, mAP
+│   │   └── kernels.py          # Kernel functions (Gaussian, Laplacian, IMQ, RQ)
+│   ├── training/
+│   │   └── moms_train.py       # TransMap training loop
+│   ├── experiments/
+│   │   ├── run_ablation_study.py
+│   │   ├── run_scalability_test.py
+│   │   └── visualize_*.py
+│   └── utils/
+│       ├── moms_utils.py       # Seed management, I/O
+│       └── moms_visualize.py   # t-SNE, plotting utilities
+├── experiments/
+│   └── configs/
+│       ├── ablation_study/     # Hyperparameter ablation configs
+│       ├── default_config.yaml
+│       └── environment.yml     # Conda environment specification
+├── custom_packages/
+│   └── boost/                  # AdaBoost, SMOTEBoost, RUSBoost, OUBoost
+├── pydpc/                      # Density Peak Clustering (for OUBoost)
+└── requirements.txt
 ```
 
-Or create a batch file:
+---
 
-```batch
-set PYTHONPATH=%CD%;%CD%\src;%CD%\src\models;%CD%\src\training;%CD%\src\utils;%CD%\pydpc
+## Quick Start
+
+### 1. Prepare Data
+
+Place datasets in `data/raw/` (KEEL `.dat` format or `.csv`) or use datasets from `imbalanced-learn`:
+
+```python
+from imblearn.datasets import fetch_datasets
+datasets = fetch_datasets()  # 27 curated imbalanced datasets
 ```
 
-## Usage
-
-### Quick Start
-
-1. **Prepare your data**: Place your dataset in `data/raw/` directory. Supported formats: CSV, DAT (LIBSVM format).
-
-2. **Run a quick test**:
-```bash
-python src/experiments/run_ablation_study.py --config experiments/configs/ablation_study/quick_test.yaml
-```
-
-### Running Ablation Studies
-
-The framework supports ablation studies for four key hyperparameters:
-
-1. **Triplet Margin (α)**
-```bash
-python src/experiments/run_ablation_study.py --config experiments/configs/ablation_study/triplet_margin_ablation.yaml
-```
-
-2. **MMD Kernel Bandwidth (σ)**
-```bash
-python src/experiments/run_ablation_study.py --config experiments/configs/ablation_study/mmd_bandwidth_ablation.yaml
-```
-
-3. **Danger Set k Value**
-```bash
-python src/experiments/run_ablation_study.py --config experiments/configs/ablation_study/danger_k_ablation.yaml
-```
-
-4. **Lambda (β) - Triplet Loss Weight**
-```bash
-python src/experiments/run_ablation_study.py --config experiments/configs/ablation_study/lambda_ablation_extended.yaml
-```
-
-### Running Scalability Tests
-
-1. **High-Dimensional Test**:
-```bash
-python src/experiments/run_scalability_test.py --config experiments/configs/scalability_test/high_dimensional_test.yaml
-```
-
-2. **Sparse Setting Test**:
-```bash
-python src/experiments/run_sparse_test.py --config experiments/configs/scalability_test/sparse_minority_test.yaml
-```
-
-### Visualizing Results
-
-After running experiments, generate visualizations:
+### 2. Run Ablation Study
 
 ```bash
-# Ablation study visualizations
-python src/experiments/visualize_ablation_results.py --results_dir results/ablation_study/triplet_margin
-
-# Scalability test visualizations
-python src/experiments/visualize_scalability.py --results_dir results/scalability_analysis
+python src/experiments/run_ablation_study.py \
+    --config experiments/configs/ablation_study/triplet_margin_ablation.yaml \
+    --output-dir results/triplet_margin
 ```
 
-### Generating Reports
-
-Generate markdown reports with analysis:
+### 3. Scalability Test
 
 ```bash
-# Ablation study report
-python src/experiments/generate_ablation_report.py --results_dir results/ablation_study
-
-# Scalability test report
-python src/experiments/generate_scalability_report.py --results_dir results/scalability_analysis
+python src/experiments/run_scalability_test.py \
+    --config experiments/configs/scalability_test.yaml
 ```
 
-## Configuration Files
+---
 
-Experiments are configured using YAML files in `experiments/configs/`. Each configuration file specifies:
+## Experiments
 
-- Model hyperparameters (network architecture, learning rate, epochs)
-- Fixed hyperparameters (not being tested)
-- Evaluation settings (number of runs, cross-validation folds, metrics)
-- Dataset list
-- Output directories
+### Hyperparameter Ablations
 
-Example configuration structure:
+| Parameter | Config File | Description |
+|-----------|------------|-------------|
+| Triplet margin (α) | `triplet_margin_ablation.yaml` | Controls positive/negative separation |
+| MMD bandwidth (σ) | `mmd_bandwidth_ablation.yaml` | Kernel bandwidth for distribution matching |
+| Danger-k | `danger_k_ablation.yaml` | k-NN threshold for borderline detection |
+| Lambda (β) | `lambda_ablation.yaml` | Triplet loss weight |
+
+### Evaluation Protocol
+
+- **Cross-validation**: 10-fold stratified CV × 10 runs
+- **Metrics**: AUROC, G-mean, F1-score, MCC
+- **Classifiers**: SVM, Decision Tree, Random Forest, k-NN, MLP
+
+---
+
+## Configuration
+
+Example configuration (`triplet_margin_ablation.yaml`):
 
 ```yaml
 experiment_name: "triplet_margin_ablation"
@@ -202,8 +166,8 @@ parameter_values: [0.1, 0.5, 1.0, 2.0, 5.0]
 model:
   n_epochs: 2000
   lr: 0.001
-  hidden_dims: [64, 32]
-  latent_dim: 16
+  hidden_dims: [16, 32, 64, 128]
+  latent_dim: 256
 
 fixed_params:
   mmd_sigma: 1.0
@@ -213,107 +177,65 @@ fixed_params:
 evaluation:
   n_runs: 10
   n_splits: 10
-  metrics: ["f1_score", "roc_auc", "g_mean"]
+  random_state: 1203
+  metrics: ["roc_auc", "g_mean", "mcc", "f1_score"]
+
+datasets:
+  - name: "ecoli3"
+    path: "data/raw/ecoli3.dat"
+  - name: "yeast6"
+    path: "imblearn"  # Load from imbalanced-learn
 ```
 
-## Key Hyperparameters
+---
 
-- **`triplet_margin` (α)**: Margin for triplet loss, controls separation between positive and negative samples
-- **`mmd_sigma` (σ)**: Bandwidth parameter for MMD Gaussian kernel
-- **`danger_k`**: Number of nearest neighbors for identifying "danger" minority samples
-- **`lambda_beta` (β)**: Weight for triplet loss in the combined objective
+## Reproducibility
 
-## Evaluation Metrics
+To reproduce results from the paper:
 
-The framework evaluates performance using multiple metrics:
+1. **Seeds**: All experiments use `random_state: 1203`
+2. **Environment**: Use `experiments/configs/environment.yml` for exact package versions
+3. **Hardware**: Results reported on NVIDIA RTX 3090 / A100
 
-- **F1-Score**: Harmonic mean of precision and recall
-- **ROC-AUC**: Area under the ROC curve
-- **G-Mean**: Geometric mean of sensitivity and specificity
-- **Precision**: True positives / (True positives + False positives)
-- **Recall**: True positives / (True positives + False negatives)
-- **Balanced Accuracy**: Average of sensitivity and specificity
+```bash
+# Verify deterministic behavior
+python -c "import torch; print(torch.cuda.is_available())"
+```
 
-## Data Format
-
-### Supported Formats
-
-1. **CSV**: Comma-separated values, last column is the target label
-2. **DAT (LIBSVM)**: Space-separated, format: `label feature1:value1 feature2:value2 ...`
-
-### Dataset Requirements
-
-- Binary classification (will be converted automatically)
-- Last column should be the target label
-- Features should be numeric (categorical features will be encoded)
-
-## Troubleshooting
-
-### Import Errors
-
-If you encounter `ModuleNotFoundError`:
-
-1. Check that all dependencies are installed: `pip install -r requirements.txt`
-2. Verify `PYTHONPATH` is set correctly (especially on Windows)
-3. Ensure you're running from the project root directory
-
-### pydpc Installation Issues
-
-If `pydpc` fails to install (common on Windows):
-
-- The code includes a fallback mechanism that uses alternative methods
-- You can skip `pydpc` installation if you're not using `OUBoost`
-- For Linux/Mac, try: `pip install pydpc` or build from source in `pydpc/` directory
-
-### CUDA/GPU Issues
-
-If CUDA is not available:
-
-- The code will automatically fall back to CPU
-- Set `device: "cpu"` in your configuration file
-- Install CPU-only PyTorch if you don't have a GPU
-
-### Memory Issues
-
-For large datasets or high-dimensional data:
-
-- Reduce `n_epochs` in configuration
-- Use smaller network architectures (`hidden_dims`, `latent_dim`)
-- Process datasets in batches
-- Consider using dimensionality reduction (PCA/UMAP) for very high-dimensional data
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## License
-
-[Specify your license here]
+---
 
 ## Citation
 
-If you use this code in your research, please cite:
+If you find this work useful, please cite:
 
 ```bibtex
-@article{moms2024,
-  title={MOMS: Minority Oversampling with Majority Selection},
-  author={Your Name},
-  journal={Journal Name},
-  year={2024}
+@article{cha2025moms,
+  title     = {Learning Majority-to-Minority Transformations with MMD and 
+               Triplet Loss for Imbalanced Classification},
+  author    = {Cha, Suman and Kim, Hyunjoong},
+  journal   = {arXiv preprint arXiv:2509.11511},
+  year      = {2025},
+  url       = {https://arxiv.org/abs/2509.11511}
 }
 ```
 
+---
+
 ## Contact
 
-For questions or issues, please open an issue on GitHub or contact [your email].
+- **Suman Cha** — [oldrain123@yonsei.ac.kr](mailto:oldrain123@yonsei.ac.kr)
+- Issues and PRs are welcome!
+
+---
+
+## License
+
+This project is released under the MIT License. See [LICENSE](LICENSE) for details.
+
+---
 
 ## Acknowledgments
 
-- This project uses the SMOTE variants library
-- Thanks to the imbalanced-learn community
-- Built with PyTorch and scikit-learn
-
+- [imbalanced-learn](https://imbalanced-learn.org/) for benchmark datasets
+- [SMOTE-variants](https://github.com/analyticalmindsltd/smote_variants) library
+- PyTorch team for the deep learning framework
