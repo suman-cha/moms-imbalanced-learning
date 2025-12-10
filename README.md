@@ -33,7 +33,7 @@ We introduce **MOMS**, an oversampling framework that learns a parametric transf
 - **TransMap Network**: Encoder-decoder architecture with skip connections for majority → minority transformation
 - **MMD Loss**: Global distribution alignment with adaptive bandwidth (median heuristic)
 - **Local Triplet Loss**: Boundary-aware regularization using danger/safe set decomposition
-- **Comprehensive Baselines**: SMOTE, ADASYN, BorderlineSMOTE, MWMOTE, CTGAN, VAE, WGAN, GAMO, MGVAE, and boosting variants
+- **Comprehensive Baselines**: SMOTE, ADASYN, BorderlineSMOTE, MWMOTE, CTGAN
 - **Config-Driven Experiments**: YAML-based hyperparameter ablations with checkpointing and multi-run aggregation
 
 ---
