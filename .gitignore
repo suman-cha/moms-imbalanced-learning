@@ -41,7 +41,6 @@ ENV/
 env.bak/
 venv.bak/
 __pypackages__/
-custom_packages/
 
 # -----------------------------------------------------------------------------
 # IDEs & Editors
@@ -142,11 +141,12 @@ checkpoints/
 experiments/notebooks/
 
 # -----------------------------------------------------------------------------
-# Third-Party Libraries (NOT tracked - install via requirements)
+# Third-Party & Custom Libraries (NOT tracked)
 # -----------------------------------------------------------------------------
 SMOTE_variants/
 tab-ddpm/
 tabsyn/
+custom_packages/
 
 # -----------------------------------------------------------------------------
 # LaTeX & Reference Materials

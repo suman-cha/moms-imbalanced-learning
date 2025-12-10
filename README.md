@@ -58,19 +58,16 @@ conda activate imb_clf
 
 # Option 2: pip
 pip install -r requirements.txt
-
-# Optional: Install pydpc for OUBoost baseline
-cd pydpc && pip install -e . && cd ..
 ```
 
 ### Environment Variables
 
 ```bash
 # Linux/Mac
-export PYTHONPATH=$PWD:$PWD/src:$PWD/pydpc
+export PYTHONPATH=$PWD:$PWD/src
 
 # Windows (PowerShell)
-$env:PYTHONPATH = "$PWD;$PWD\src;$PWD\pydpc"
+$env:PYTHONPATH = "$PWD;$PWD\src"
 ```
 
 ---
@@ -99,9 +96,6 @@ moms-imbalanced-learning/
 │       ├── ablation_study/     # Hyperparameter ablation configs
 │       ├── default_config.yaml
 │       └── environment.yml     # Conda environment specification
-├── custom_packages/
-│   └── boost/                  # AdaBoost, SMOTEBoost, RUSBoost, OUBoost
-├── pydpc/                      # Density Peak Clustering (for OUBoost)
 └── requirements.txt
 ```
 
