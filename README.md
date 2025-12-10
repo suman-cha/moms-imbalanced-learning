@@ -141,10 +141,10 @@ python src/experiments/run_scalability_test.py \
 
 | Parameter | Config File | Description |
 |-----------|------------|-------------|
-| Triplet margin (α) | `triplet_margin_ablation.yaml` | Controls positive/negative separation |
-| MMD bandwidth (σ) | `mmd_bandwidth_ablation.yaml` | Kernel bandwidth for distribution matching |
+| Triplet margin | `triplet_margin_ablation.yaml` | Controls positive/negative separation |
+| MMD bandwidth | `mmd_bandwidth_ablation.yaml` | Kernel bandwidth for distribution matching |
 | Danger-k | `danger_k_ablation.yaml` | k-NN threshold for borderline detection |
-| Lambda (β) | `lambda_ablation.yaml` | Triplet loss weight |
+| Lambda | `lambda_ablation.yaml` | Triplet loss weight |
 
 ### Evaluation Protocol
 
