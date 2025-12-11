@@ -84,14 +84,12 @@ moms-imbalanced-learning/
 │   │   └── kernels.py          # Kernel functions (Gaussian, Laplacian, IMQ, RQ)
 │   ├── training/
 │   │   └── moms_train.py       # TransMap training loop
-│   ├── experiments/
-│   │   ├── run_main_experiments.py
-│   │   ├── run_all_experiments.sh
-│   │   └── visualize_*.py
 │   └── utils/
 │       ├── moms_utils.py       # Seed management, I/O
 │       └── moms_visualize.py   # t-SNE, plotting utilities
 ├── experiments/
+│   ├── run_main_experiments.py # Main experiment script
+│   ├── run_all_experiments.sh  # Shell script to run all experiments
 │   └── configs/
 │       ├── ablation_study/     # Hyperparameter ablation configs
 │       ├── default_config.yaml
