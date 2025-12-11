@@ -33,7 +33,7 @@ We introduce **MOMS**, an oversampling framework that learns a parametric transf
 - **TransMap Network**: Encoder-decoder architecture with skip connections for majority → minority transformation
 - **MMD Loss**: Global distribution alignment with adaptive bandwidth (median heuristic)
 - **Local Triplet Loss**: Boundary-aware regularization using danger/safe set decomposition
-- **Comprehensive Baselines**: SMOTE, ADASYN, BorderlineSMOTE, MWMOTE, CTGAN
+- **Comprehensive Baselines**: ROS, SMOTE, bSMOTE, ADASYN, MWMOTE, CTGAN, GAMO, MGVAE
 - **Config-Driven Experiments**: YAML-based hyperparameter ablations with checkpointing and multi-run aggregation
 
 ---
@@ -85,8 +85,8 @@ moms-imbalanced-learning/
 │   ├── training/
 │   │   └── moms_train.py       # TransMap training loop
 │   ├── experiments/
-│   │   ├── run_ablation_study.py
-│   │   ├── run_scalability_test.py
+│   │   ├── run_main_experiments.py
+│   │   ├── run_all_experiments.sh
 │   │   └── visualize_*.py
 │   └── utils/
 │       ├── moms_utils.py       # Seed management, I/O
@@ -112,24 +112,37 @@ from imblearn.datasets import fetch_datasets
 datasets = fetch_datasets()  # 27 curated imbalanced datasets
 ```
 
-### 2. Run Ablation Study
+### 2. Run Experiments
+
+Run the full experiment pipeline with standard baselines:
 
 ```bash
-python src/experiments/run_ablation_study.py \
-    --config experiments/configs/ablation_study/triplet_margin_ablation.yaml \
-    --output-dir results/triplet_margin
+# Run on specific datasets
+python experiments/run_main_experiments.py \
+    --datasets us_crime oil \
+    --methods MMD+T MMD SMOTE ADASYN \
+    --device cuda
+
+# Run all experiments using shell script
+bash experiments/run_all_experiments.sh
 ```
-
-### 3. Scalability Test
-
-```bash
-python src/experiments/run_scalability_test.py \
-    --config experiments/configs/scalability_test.yaml
-```
-
----
 
 ## Experiments
+
+### Available Methods
+
+| Method | Description | Package Required |
+|--------|-------------|------------------|
+| `MMD+T` | Proposed method (MMD + Triplet Loss) | Built-in |
+| `MMD` | Proposed method (MMD only, λ=0) | Built-in |
+| `ROS` | Random Oversampling | imblearn |
+| `SMOTE` | Synthetic Minority Oversampling | imblearn |
+| `bSMOTE` | Borderline-SMOTE | imblearn |
+| `ADASYN` | Adaptive Synthetic Sampling | imblearn |
+| `MWMOTE` | Majority Weighted Minority Oversampling | SMOTE_variants |
+| `CTGAN` | Conditional Tabular GAN | ctgan |
+| `GAMO` | GAN-based Minority Oversampling | gamosampler |
+| `MGVAE` | Majority-Guided VAE | Built-in |
 
 ### Hyperparameter Ablations
 
@@ -179,21 +192,6 @@ datasets:
     path: "data/raw/ecoli3.dat"
   - name: "yeast6"
     path: "imblearn"  # Load from imbalanced-learn
-```
-
----
-
-## Reproducibility
-
-To reproduce results from the paper:
-
-1. **Seeds**: All experiments use `random_state: 1203`
-2. **Environment**: Use `experiments/configs/environment.yml` for exact package versions
-3. **Hardware**: Results reported on NVIDIA RTX 3090 / A100
-
-```bash
-# Verify deterministic behavior
-python -c "import torch; print(torch.cuda.is_available())"
 ```
 
 ---

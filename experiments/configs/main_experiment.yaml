@@ -1,0 +1,41 @@
+# Main Experiment Configuration
+# Paper: "Learning Majority-to-Minority Transformations with MMD and Triplet Loss 
+#         for Imbalanced Classification" (arXiv:2509.11511)
+#
+# This configuration follows the hyperparameter settings from Section 4.2
+
+# Dataset settings
+data_source: "imblearn"  # "imblearn" or "custom"
+data_path: null  # Set this for custom .dat datasets
+
+# Training hyperparameters (Paper Section 4.2)
+# λ = 0.01, k = 5, α = 1.0, Adam optimizer with default settings
+n_epochs: 1000
+lr: 0.01
+beta: 0.01  # λ in paper - regularization coefficient
+
+# Architecture (auto-scaled based on input dimension if null)
+# Network capacity is automatically scaled based on input dimension d
+hidden_dims: null  # Will use [d*2, d*4, d*8, d*16]
+latent_dim: null  # Will use d*32
+
+# Triplet loss settings (Paper Section 3.2)
+k_neighbors: 5  # k in paper - number of neighbors for triplet mining
+triplet_margin: 1.0  # α in paper - triplet loss margin
+
+# MMD kernel settings
+kernel_type: "gaussian"
+
+# Evaluation settings (Paper Section 4.1)
+# 10-fold cross-validation repeated over 10 independent trials
+n_runs: 10
+n_splits: 10
+seed: 1203
+
+# Output settings
+save_path: "./results"
+visualize: false
+
+# Device settings
+device: "cuda"
+

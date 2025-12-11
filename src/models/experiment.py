@@ -1,9 +1,23 @@
+"""
+Experiment module for imbalanced classification.
+
+This module provides functions to run experiments with various oversampling methods
+and evaluate their performance on imbalanced datasets.
+
+Paper: "Learning Majority-to-Minority Transformations with MMD and Triplet Loss 
+        for Imbalanced Classification" (arXiv:2509.11511)
+"""
+
 import os
 import sys
-sys.path.append("/home/oldrain123/IMBALANCED_CLASSIFICATION/MOMs")
-sys.path.append("/home/oldrain123/IMBALANCED_CLASSIFICATION/boost")
-sys.path.append('/home/oldrain123/IMBALANCED_CLASSIFICATION/')
-sys.path.append('/home/oldrain123/IMBALANCED_CLASSIFICATION/SMOTE_variants/')
+from pathlib import Path
+
+# Add project root to path for imports
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+if str(_PROJECT_ROOT / "src") not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT / "src"))
 
 import time
 from typing import Any
@@ -14,20 +28,77 @@ from collections import Counter
 from sklearn.model_selection import StratifiedKFold
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 
-from ctgan import CTGAN
-from mgvae import MGVAE
+# Core imports
 from imblearn.over_sampling import SMOTE, ADASYN, BorderlineSMOTE, RandomOverSampler
-from SMOTE_variants.sm_variants.oversampling.mwmote import MWMOTE
-from gamosampler import GAMOtabularSampler
-from osman.oversampler import VAEify, WGANify
-from custom_packages.boost import AdaBoostClassifier, SMOTEBoost, RUSBoost, OUBoost
 from sklearn.tree import DecisionTreeClassifier
 
+# Local imports
 from src.utils.moms_utils import set_seed, save_results
 from src.models.moms_losses import MMD_est_torch
 from src.models.moms_metrics import Metrics
 from src.models.moms_generate import transform
-from src.utils.moms_visualize import plot_tsne
+
+# Optional imports - handle gracefully if not installed
+try:
+    from ctgan import CTGAN
+    CTGAN_AVAILABLE = True
+except ImportError:
+    CTGAN_AVAILABLE = False
+    CTGAN = None
+
+try:
+    from src.models.mgvae import MGVAE
+    MGVAE_AVAILABLE = True
+except ImportError:
+    try:
+        from mgvae import MGVAE
+        MGVAE_AVAILABLE = True
+    except ImportError:
+        MGVAE_AVAILABLE = False
+        MGVAE = None
+
+try:
+    from src.models.gamosampler import GAMOtabularSampler
+    GAMO_AVAILABLE = True
+except ImportError:
+    try:
+        from gamosampler import GAMOtabularSampler
+        GAMO_AVAILABLE = True
+    except ImportError:
+        GAMO_AVAILABLE = False
+        GAMOtabularSampler = None
+
+try:
+    from SMOTE_variants.sm_variants.oversampling.mwmote import MWMOTE
+    MWMOTE_AVAILABLE = True
+except ImportError:
+    MWMOTE_AVAILABLE = False
+    MWMOTE = None
+
+try:
+    from osman.oversampler import VAEify, WGANify
+    OSMAN_AVAILABLE = True
+except ImportError:
+    OSMAN_AVAILABLE = False
+    VAEify = None
+    WGANify = None
+
+try:
+    from custom_packages.boost import AdaBoostClassifier, SMOTEBoost, RUSBoost, OUBoost
+    BOOST_AVAILABLE = True
+except ImportError:
+    BOOST_AVAILABLE = False
+    AdaBoostClassifier = None
+    SMOTEBoost = None
+    RUSBoost = None
+    OUBoost = None
+
+try:
+    from src.utils.moms_visualize import plot_tsne
+    VISUALIZE_AVAILABLE = True
+except ImportError:
+    VISUALIZE_AVAILABLE = False
+    plot_tsne = None
 
 
 np.bool = np.bool_
@@ -126,26 +197,41 @@ def run_exp(
             X_tr, X_te = X.iloc[tr_idx, :], X.iloc[te_idx, :]
             y_tr, y_te = y[tr_idx], y[te_idx]
 
-            supported_methods = {"Original", "Boost", "SMOTE", "ADASYN", "bSMOTE", 
-                        "ROS", "MWMOTE", "CTGAN", "VAE", "WGAN", "GAMO", "MGVAE", "Ours"}
+            # Define supported methods based on available packages
+            supported_methods = {"Original", "SMOTE", "ADASYN", "bSMOTE", "ROS", "Ours", "MMD", "MMD+T"}
+            if BOOST_AVAILABLE:
+                supported_methods.add("Boost")
+            if MWMOTE_AVAILABLE:
+                supported_methods.add("MWMOTE")
+            if CTGAN_AVAILABLE:
+                supported_methods.add("CTGAN")
+            if OSMAN_AVAILABLE:
+                supported_methods.update({"VAE", "WGAN"})
+            if GAMO_AVAILABLE:
+                supported_methods.add("GAMO")
+            if MGVAE_AVAILABLE:
+                supported_methods.add("MGVAE")
+            
             selected_methods = supported_methods if methods is None else set(methods).intersection(supported_methods)
 
             # -----------------------------
-            # Use raw data for CTGAN
+            # Use raw data for CTGAN (if available and selected)
             # -----------------------------
             X_tr_raw = X_tr.copy()  
             X_maj_raw = X_tr_raw[y_tr == 0]
             X_min_raw = X_tr_raw[y_tr == 1]
-
-            column_names = [f"col_{i}" for i in range(X_min_raw.shape[1])]
-            X_min_raw.columns = column_names
-            ctgan = CTGAN(epochs=100)
-            cat_features_ctgan = [column_names[i] for i in cat_idx] if len(cat_idx) > 0 else []
-            ctgan.fit(X_min_raw, discrete_columns=cat_features_ctgan)
-            
-            # Generate synthetic minority samples so that the augmented set has balanced majority/minority
             n_trans = len(X_maj_raw) - len(X_min_raw)
-            X_ctgan = ctgan.sample(n=n_trans)
+            
+            X_ctgan = None
+            if CTGAN_AVAILABLE and "CTGAN" in selected_methods:
+                column_names = [f"col_{i}" for i in range(X_min_raw.shape[1])]
+                X_min_raw.columns = column_names
+                ctgan = CTGAN(epochs=n_epochs)
+                cat_features_ctgan = [column_names[i] for i in cat_idx] if len(cat_idx) > 0 else []
+                ctgan.fit(X_min_raw, discrete_columns=cat_features_ctgan)
+                
+                # Generate synthetic minority samples so that the augmented set has balanced majority/minority
+                X_ctgan = ctgan.sample(n=n_trans)
             
             # -----------------------------
             # Create one-hot encoded data for transformation
@@ -170,14 +256,17 @@ def run_exp(
                 X_tr_enc = scaler.fit_transform(X_tr_enc)
                 X_te_enc = scaler.transform(X_te_arr)
 
-            ctgan_arr = X_ctgan.values  # CTGAN : DataFrame -> Numpy array
+            # Encode CTGAN samples if available
+            X_ctgan_enc = None
+            if X_ctgan is not None:
+                ctgan_arr = X_ctgan.values  # CTGAN : DataFrame -> Numpy array
 
-            if len(cat_idx) > 0:
-                cat_data_ctgan = encoder.transform(ctgan_arr[:, cat_idx])
-                num_data_ctgan = num_scaler.transform(ctgan_arr[:, [i for i in range(ctgan_arr.shape[1]) if i not in cat_idx]])
-                X_ctgan_enc = np.hstack((num_data_ctgan, cat_data_ctgan))
-            else:
-                X_ctgan_enc = scaler.transform(ctgan_arr)
+                if len(cat_idx) > 0:
+                    cat_data_ctgan = encoder.transform(ctgan_arr[:, cat_idx])
+                    num_data_ctgan = num_scaler.transform(ctgan_arr[:, [i for i in range(ctgan_arr.shape[1]) if i not in cat_idx]])
+                    X_ctgan_enc = np.hstack((num_data_ctgan, cat_data_ctgan))
+                else:
+                    X_ctgan_enc = scaler.transform(ctgan_arr)
             
             X_maj_enc = X_tr_enc[y_tr == 0]
             X_min_enc = X_tr_enc[y_tr == 1]
@@ -196,16 +285,16 @@ def run_exp(
                 datasets["bSMOTE"] = BorderlineSMOTE(random_state=seed).fit_resample(X_tr_enc, y_tr)
             if "ROS" in selected_methods:
                 datasets["ROS"] = RandomOverSampler(random_state=seed).fit_resample(X_tr_enc, y_tr)
-            if "MWMOTE" in selected_methods:
+            if "MWMOTE" in selected_methods and MWMOTE_AVAILABLE:
                 datasets["MWMOTE"] = MWMOTE(random_state=seed).sample(X_tr_enc, y_tr)
-            if "CTGAN" in selected_methods:
+            if "CTGAN" in selected_methods and X_ctgan_enc is not None:
                 datasets["CTGAN"] = (np.vstack((X_maj_enc, X_min_enc, X_ctgan_enc)), 
                                      np.hstack((np.zeros(len(X_maj_enc)), np.ones(len(X_min_enc) + len(X_ctgan_enc)))))
-            if "VAE" in selected_methods:
+            if "VAE" in selected_methods and OSMAN_AVAILABLE:
                 datasets['VAE'] = VAEify(pd.DataFrame(X_tr_enc), pd.Series(y_tr.flatten()), n_epochs, seed, device)
-            if "WGAN" in selected_methods:
+            if "WGAN" in selected_methods and OSMAN_AVAILABLE:
                 datasets['WGAN'] = WGANify(pd.DataFrame(X_tr_enc), pd.Series(y_tr.flatten()), n_epochs=n_epochs)
-            if "GAMO" in selected_methods:
+            if "GAMO" in selected_methods and GAMO_AVAILABLE:
                 all_minority_X = {0: X_maj_enc, 1: X_min_enc}
                 gamo = GAMOtabularSampler(input_dim = X_min_enc.shape[1], all_minority_X = all_minority_X, class_counts=[len(X_maj_enc), len(X_min_enc)], latent_dim=X_maj_enc.shape[1], hidden_dim=X_maj_enc.shape[1]*2, device=device)
                 class_X_dict = {0: X_maj_enc, 1: X_min_enc}
@@ -213,7 +302,7 @@ def run_exp(
                 X_gamo = gamo.sample(n_samples=n_trans, class_id=1)
                 datasets["GAMO"] = (np.vstack((X_maj_enc, X_min_enc, X_gamo)),
                     np.hstack((np.zeros(len(X_maj_enc)), np.ones(len(X_min_enc) + len(X_gamo)))))
-            if "MGVAE" in selected_methods:
+            if "MGVAE" in selected_methods and MGVAE_AVAILABLE:
                 X_maj_tensor = torch.tensor(X_maj_enc, dtype=torch.float32).to(device)
                 X_min_tensor = torch.tensor(X_min_enc, dtype=torch.float32).to(device)
                 
@@ -247,31 +336,39 @@ def run_exp(
                                     np.hstack((np.zeros(len(X_maj_enc)), 
                                                 np.ones(len(X_min_enc) + len(X_mgvae)))))
 
-            if "Ours" in selected_methods:
+            if "Ours" in selected_methods or "MMD" in selected_methods or "MMD+T" in selected_methods:
                 # -----------------------------
                 # Apply transformation using the one-hot encoded data
                 # -----------------------------
-                X_maj_T, X_min_T, X_trans = transform(
-                    X_maj=X_maj_enc,
-                    X_min=X_min_enc,
-                    in_dim=in_dim,
-                    hidden_dims=hidden_dims,
-                    latent_dim=latent_dim,
-                    loss_fn=MMD_est_torch,
-                    kernel_type=kernel_type,
-                    loss_params=loss_params,
-                    device=device,
-                    method="direct",
-                    n_epochs=n_epochs,
-                    lr=lr,
-                    beta=beta,
-                    seed=f_seed
-                )
-                datasets["Ours"] = (np.vstack((X_maj_enc, X_min_enc, X_trans)),
-                                    np.hstack((np.zeros(len(X_maj_enc)), np.ones(len(X_min_enc) + len(X_trans)))))
+                
+                # Determine beta for each variant
+                variants = []
+                if "Ours" in selected_methods: variants.append(("Ours", beta))
+                if "MMD" in selected_methods: variants.append(("MMD", 0.0))
+                if "MMD+T" in selected_methods: variants.append(("MMD+T", beta if beta > 0 else 0.01))
+                
+                for m_name, m_beta in variants:
+                    X_maj_T, X_min_T, X_trans = transform(
+                        X_maj=X_maj_enc,
+                        X_min=X_min_enc,
+                        in_dim=in_dim,
+                        hidden_dims=hidden_dims,
+                        latent_dim=latent_dim,
+                        loss_fn=MMD_est_torch,
+                        kernel_type=kernel_type,
+                        loss_params=loss_params,
+                        device=device,
+                        method="direct",
+                        n_epochs=n_epochs,
+                        lr=lr,
+                        beta=m_beta,
+                        seed=f_seed
+                    )
+                    datasets[m_name] = (np.vstack((X_maj_enc, X_min_enc, X_trans)),
+                                        np.hstack((np.zeros(len(X_maj_enc)), np.ones(len(X_min_enc) + len(X_trans)))))
 
             for method, (X_bal, y_bal) in datasets.items():
-                if method == "Boost":
+                if method == "Boost" and BOOST_AVAILABLE:
                     # Boosting methods
                     # AdaBoost
                     model_ada = AdaBoostClassifier(
@@ -366,7 +463,7 @@ def run_exp(
             if visualize:
                 from sklearn.manifold import TSNE
                 import matplotlib.pyplot as plt
-                methods_plot = ['SMOTE', 'CTGAN', 'GAMO', 'MGVAE', 'Ours']
+                methods_plot = ['SMOTE', 'CTGAN', 'GAMO', 'MGVAE', 'MMD', 'MMD+T']
                 synth = {}
                 if 'SMOTE' in datasets:
                     X_res, y_res = datasets['SMOTE']
@@ -379,8 +476,19 @@ def run_exp(
                     synth['GAMO'] = X_gamo
                 if 'MGVAE' in datasets:
                     synth['MGVAE'] = X_mgvae
-                if 'Ours' in datasets:
-                    synth['Ours'] = X_trans
+                if 'MMD' in datasets:
+                    X_res, y_res = datasets['MMD']
+                    start = len(X_tr_enc)
+                    X_new = X_res[start:][y_res[start]==1]
+                    synth['MMD'] = X_new
+                if 'MMD+T' in datasets:
+                    X_res, y_res = datasets['MMD+T']
+                    start = len(X_tr_enc)
+                    X_new = X_res[start:][y_res[start]==1]
+                    synth['MMD+T'] = X_new
+                
+                # Filter plots to only show available methods
+                methods_plot = [m for m in methods_plot if m in synth]
                 
                 # 3) TSNE subplot 생성
                 n = len(methods_plot)
